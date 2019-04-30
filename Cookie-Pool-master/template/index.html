@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cookie—Pool</title>
+    <style type="text/css" >
+        .title{
+            text-align: center;
+            font-size: 30px;
+        }
+        .data{
+            margin:0px auto;
+        }
+        .get_cookie{
+            display: inline-block;
+            text-align:center;
+            margin:0 auto;
+        }
+        .ladda-button{
+            cursor: pointer;
+            background-color: #66afaa;
+            border-radius: 2px;
+            border: 1px solid transparent;
+            -webkit-appearance: none;
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .container{
+   width:100px;
+   /*border:1px solid #6C9C2C;*/
+   /*height:25px;*/
+ }
+.bar{
+   background:#95CA0D;
+   float:left;
+   height:100%;
+   text-align:center;
+   line-height:150%;
+ }
+
+    </style>
+</head>
+<body>
+<div >
+<h2 class="title">Cookies-Pool</h2>
+    <hr>
+<div>
+    <table border="0" cellspacing="20" class="data">
+        <!--无边框表格-->
+        <tr>
+            <th>DOMAIN</th>
+            <th>COOKIE_COUNT</th>
+            <th>USE_NUMBER</th>
+            <th>TEST_TYPE</th>
+            <th>TEST_URL</th>
+            <th>TEST_SIGN</th>
+            <th>TESTING_DATA</th>
+            <th>INSERT_DATA</th>
+            <th>UPDATE_DATE</th>
+            <th>保存</th>
+            <th>删除</th>
+            <th>检测</th>
+
+        </tr>
+        {% for item in data  %}
+
+        <tr class="action">
+            <form action="/" method="post">
+                {% module xsrf_form_html() %}
+            <td>{{item['domain']}}</td>
+                <input type="hidden"  name="domain" value="{{item['domain']}}">
+            <td id={{item['domain']}}count >{{item['count']}}</td>
+            <td>{{item['use_number']}}</td>
+            <td><select name="test_type" id="">
+
+                {% if item['test_type'] == 'Requests' %}
+                <option value ="Requests" selected>Requests</option>
+                {% else %}
+                <option value ="Requests" >Requests</option>
+                {% end %}
+
+                {% if item['test_type'] == 'Selenium' %}
+                <option value ="Selenium" selected>Selenium</option>
+                {% else %}
+                <option value ="Selenium" >Selenium</option>
+                {% end %}
+                <option value ="Null" >Null</option>
+
+
+            </select></td>
+            <td><input type="text" name="test_url" value="{{item['test_url']}}"></td>
+            <td><input type="text" name="test_sign" value="{{item['test_sign']}}"></td>
+            <td>{{item['testing_date']}}</td>
+            <td>{{item['insert_date']}}</td>
+
+
+            <td id={{item['domain']}}update_date>{{item['update_date']}}</td>
+            <td><button type="submit" name="button" value="save">Save</button></td>
+                <td><button type="submit"  name="button" value="del">delete</button></td>
+            </form>
+
+            <!--下面是检测的websockerd-->
+            <td>
+                <button class="ladda-button" data-color="mint" data-style="expand-right" data-size="l" onclick="sendMsg(this)" value="{{item['domain']}}">
+                    <div class="container">
+
+                   <div class="bar" id={{item['domain']}}bar style="width:0%;"></div>
+                  </div>
+                  <span class="total" id={{item['domain']}}total>检测</span>
+
+                </button>
+            </td>
+
+
+        </tr>
+
+        {% end %}
+    </table>
+</div>
+    <hr>
+    <div style="text-align: center;" >
+        <div class="get_cookie">
+        <form action="/" method="post">
+            {% module xsrf_form_html() %}
+                <input type="text" name="cookie_url"  placeholder="解析的网址"> :
+                <input type="text" name="cookie_text" style="width: 300px" placeholder="解析的cookie">
+                <button type="submit" name="button" value="analysis_cookie">解析cookie</button>
+        </form>
+            </div>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <div class="get_cookie">
+            <form action="/" method="post">
+                {% module xsrf_form_html() %}
+                <input type="text" name="cookie_text" placeholder="需要获取cookie的URL" >
+                <button type="submit" name="button" value="chrome_cookie">获取Chrome Cookie</button>
+        </form>
+            </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+        function sendMsg(obj) {
+            var msg = obj.value;
+            var bar = document.getElementById(msg+"bar");
+            var total = document.getElementById(msg+"total");
+            var count = document.getElementById(msg+"count");
+            var update = document.getElementById(msg+"update_date");
+            var ws = new WebSocket("ws://localhost:8016/chat");
+            total.innerHTML = "等待检测";
+            ws.onmessage = function(e) {
+                var data =  new Function("return" + e.data)();
+                if (data['error']==1){
+                    total.style.color = '#263bb4';
+                    return total.innerHTML = "不能检测！";
+                    ws.close();
+                };
+                bar.style.width = data['proportion']+ "%";
+                total.innerHTML = bar.style.width;
+                if (bar.style.width == "100%") {
+                    bar.style.width = "0%";
+                    total.innerHTML = "检测完成";
+                    count.innerHTML = data['count'];
+                    update.innerHTML = data['update'];
+                    ws.close();
+                    return
+                }
+            };
+
+            ws.onopen=function () {
+                ws.send(msg);
+            }
+
+        }
+    </script>
+
+</body>
+</html>
